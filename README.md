@@ -1,5 +1,4 @@
 ## Sistema de Irrigação Automatizada
-=========
 
 Projeto proveniente de uma parceria entre os departamentos de Estatística e Informática (DEInfo) e de Tecnologia Rural (DTR), ambos da Universidade Federal Rural de Pernambuco, com o objetivo de apoiar e facilitar uma pesquisa para uma dissertação de mestrado no curso de Engenharia Agrícola e Ambiental. 
 
