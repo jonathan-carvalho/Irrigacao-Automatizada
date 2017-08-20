@@ -16,7 +16,11 @@ const int chipSelect = 53;
 File clima; // Dia,Mes,Ano,Hora,Minuto,Segundo,Temperatura,Umidade
 File configValvulas; // Valvula,Qt_pulsos,Intervalo
 
-int tempoRega = 120; //tempo em segundos
+int tempoRegaDia = 5; //tempo em minutos
+
+String inicioFuncionamento = "18:01"; // HH:MM
+
+
 
 // ------------------------- Inicio da classe Valvula -------------------------
 class Valvula{
@@ -27,9 +31,14 @@ class Valvula{
     int qtPulsosDados;
     int intervaloPulsos;
     String alarme;
+    int pino;
     
   public:
-    Valvula(){}
+    Valvula(){
+      estado = false;
+      qtPulsosDados = 0;
+      alarme = inicioFuncionamento;
+      }
     
     int getNumero(){
       return numero;
@@ -78,6 +87,14 @@ class Valvula{
     void setAlarme(String novoAlarme){
       alarme = novoAlarme;
       }
+
+    int getPino(){
+      return pino;
+      }
+      
+    void setPino(int numeroPino){
+      pino = numeroPino;
+      }  
 };
 
 // ------------------------- Fim da classe Valvula -------------------------
@@ -85,15 +102,16 @@ class Valvula{
 Valvula valvula1, valvula2, valvula3, valvula4, valvula5, valvula6, valvula7;
 
 Valvula valvulas[] = {valvula1, valvula2, valvula3, valvula4, valvula5, valvula6, valvula7};
+int pinosValvulas[] = {22, 24, 26, 28, 30, 32, 34};
 
 
 String readLinha(File file){
-  String configuracao;
+  String linha;
   while (file.available()) {
-      configuracao = file.readStringUntil('\n');
+      linha = file.readStringUntil('\n');
       break;
     }
-  return configuracao;
+  return linha;
 }
 
 void configuraInicialValvula(String configuracaoInicial, int posicao){
@@ -116,13 +134,15 @@ void configuraInicialValvula(String configuracaoInicial, int posicao){
     
     inicio = fim + 1; 
   }  
-
+    
   int qtPulsos = configSeparada[1].toInt();
   valvulas[posicao].setQtPulsosTotal(qtPulsos);  
 
   int intervalo = configSeparada[2].toInt();
   valvulas[posicao].setIntervaloPulsos(intervalo);
-  
+
+  valvulas[posicao].setNumero(posicao+1);
+  valvulas[posicao].setPino(pinosValvulas[posicao]);
 } 
 
 
@@ -141,15 +161,143 @@ void atualizaConfigTodasValvulas(){
  configValvulas.close();
 }
 
+void atualizaEstadosValvulas(String horaAtual){
+  
+  for (int i=0; i < 7; i++) {
+        
+    String alarme = valvulas[i].getAlarme();
+    
+    if (horaAtual == alarme){
+      Serial.println("");
+      Serial.println("");
+      Serial.println("------------------------------------");
+      Serial.print("Vamos ligar ou desligar a válvula: ");
+      Serial.println(valvulas[i].getNumero());
+          
+      boolean estado = valvulas[i].getEstado();
+      
+      if (estado == true){
+        
+        valvulas[i].setEstado(false);
+        int pino = valvulas[i].getPino();
+        digitalWrite(pino, HIGH);
+        Serial.println("Válvula Desligada!");
+        
+        int qtPulsosDados = valvulas[i].getQtPulsosDados() + 1;
+        valvulas[i].setQtPulsosDados(qtPulsosDados);
+        Serial.print("Foram dados: ");
+        Serial.print(qtPulsosDados);
+        Serial.println(" pulsos");
+        
+        int qtPulsosTotal = valvulas[i].getQtPulsosTotal();
+        Serial.print("O total de pulsos para essa válvula é: ");
+        Serial.println(qtPulsosTotal);
+        
+        if (qtPulsosDados == qtPulsosTotal){
+          Serial.print("Essa válvula terminou de irrigar por hoje e só será ligada novamente às: ");
+          valvulas[i].setQtPulsosDados(0);
+          valvulas[i].setAlarme(inicioFuncionamento);
+          Serial.println(valvulas[i].getAlarme());
+          
+          }else{
+
+            int intervalo = valvulas[i].getIntervaloPulsos();
+            
+            String novoAlarme = somaHora(alarme, intervalo);
+            
+            valvulas[i].setAlarme(novoAlarme);
+            Serial.print("Ela será ligada novamente às: ");
+            Serial.println(novoAlarme);
+            Serial.print("E agora são: ");
+            Serial.println(horaAtual);
+            
+            
+            
+            }
+            
+        }else{
+
+          valvulas[i].setEstado(true);
+          int pino = valvulas[i].getPino();
+          digitalWrite(pino, LOW);
+          Serial.println("Válvula Ligada!");
+          
+          int tempoPulsoMinutos = tempoRegaDia / valvulas[i].getQtPulsosTotal();
+          String novoAlarme = somaHora(alarme, tempoPulsoMinutos);
+          valvulas[i].setAlarme(novoAlarme);                 
+          Serial.print("Vai ficar ligada até: ");
+          Serial.println(novoAlarme);
+          Serial.print("E agora são: ");
+          Serial.println(horaAtual);
+          }
+          
+    }
+  
+  } 
+}
+
+
+String obterHoraAtual(){
+  
+  myRTC.updateTime();
+  
+  int hora = myRTC.hours;
+  String horaString = String(hora);
+  if (hora < 10){
+    horaString = "0" + horaString;
+    }
+    
+  int minuto = myRTC.minutes;
+  String minutoString = String(minuto);
+  if (minuto < 10){
+    minutoString = "0" + minutoString;
+    }
+
+  String horaAtual = horaString + ":" + minutoString;
+  return horaAtual;
+}
+
+String somaHora(String horarioAtual, int minutos){
+
+  int horaFinal = horarioAtual.substring(0,2).toInt();
+  int minutoAtual = horarioAtual.substring(3).toInt();
+
+  int minutosFinal = minutoAtual + minutos;
+
+  if (minutosFinal > 59){
+    
+    horaFinal += 1;
+    minutosFinal -= 60;    
+    }
+
+  String horaString = String(horaFinal);
+  if (horaFinal < 10){
+    horaString = "0" + horaString;
+    }
+  
+  String minutoString = String(minutosFinal);
+  if (minutosFinal < 10){
+    minutoString = "0" + minutoString;
+    }   
+  
+  return horaString + ":" + minutoString;
+}
+
+
+
 void setup() {
-  // Serial1.begin(9600);
+  
+  for (int i=0; i < 7; i++){
+    int pino = pinosValvulas[i];
+    pinMode(pino, OUTPUT);
+    digitalWrite(pino, HIGH);
+  }
+  
   Serial.begin(9600);
 
-  //Serial.println(teste.getNumero());
-  //Serial1.println("DHTxx test!");
-
-  
-  Serial.print("Initializing SD card...");
+  // Serial1.begin(9600);
+    
+  Serial.print("Initializing SD card... ");
 
   // see if the card is present and can be initialized:
   if (!SD.begin(chipSelect)) {
@@ -158,31 +306,32 @@ void setup() {
     return;
   }
   Serial.println("card initialized.");
-
-
-  //Informacoes iniciais de data e hora
-  //Apos setar as informacoes, comente a linha abaixo
-  //(segundos, minutos, hora, dia da semana, dia do mes, mes, ano)
-  //myRTC.setDS1302Time(00, 28, 21, 5, 17, 8, 2017);
-  
+ 
   atualizaConfigTodasValvulas();
 
   for (int i=0; i < 7; i++) {
-   Serial.print("Valvula ");
-   Serial.println(i+1);
    Valvula valvula = valvulas[i];
+   Serial.print("Valvula ");
+   Serial.println(valvula.getNumero());
    Serial.print("Pulsos Total: ");
    Serial.println(valvula.getQtPulsosTotal());
    Serial.print("Intervalo entre pulsos: ");
-   Serial.println(valvula.getIntervaloPulsos()); 
-   Serial.println("------------------");
-   
+   Serial.println(valvula.getIntervaloPulsos());
+   Serial.print("Controla o pino: ");
+   Serial.println(valvula.getPino()); 
+   Serial.println("------------------");  
   }
-   
+  
+  Serial.println("");
+  Serial.println("");
 }
 
 void loop() {
   
+  String horaAtual = obterHoraAtual();
+
+  atualizaEstadosValvulas(horaAtual);
+   
   // Reading temperature or humidity takes about 250 milliseconds!
   // Sensor readings may also be up to 2 seconds 'old' (its a very slow sensor)
   /*float h = dht.readHumidity();
