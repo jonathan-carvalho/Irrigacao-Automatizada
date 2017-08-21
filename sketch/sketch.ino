@@ -1,16 +1,22 @@
 #include <virtuabotixRTC.h>
 
-// #include "DHT.h"
+#include "DHT.h"
 #include <SPI.h>
 #include <SD.h>
 
 // myRTC(clock, data, rst)
 virtuabotixRTC myRTC(31, 29, 27);
 
-// #define DHTPIN 2     // what digital pin we're connected to
-// #define DHTTYPE DHT22   // DHT 22  (AM2302), AM2321
-// DHT dht(DHTPIN, DHTTYPE);
+#define DHTPIN 2     // what digital pin we're connected to
+#define DHTTYPE DHT22   // DHT 22  (AM2302), AM2321
+DHT dht(DHTPIN, DHTTYPE);
 
+#define DIA 1
+#define MES 2
+#define ANO 3
+#define HORA 4
+#define MINUTO 5
+#define SEGUNDO 6
 
 const int chipSelect = 53;
 File clima; // Dia,Mes,Ano,Hora,Minuto,Segundo,Temperatura,Umidade
@@ -18,7 +24,9 @@ File configValvulas; // Valvula,Qt_pulsos,Intervalo
 
 int tempoRegaDia = 5; //tempo em minutos
 
-String inicioFuncionamento = "18:01"; // HH:MM
+String inicioFuncionamento = "10:08"; // HH:MM
+
+String ultimaColeta;
 
 
 
@@ -283,7 +291,94 @@ String somaHora(String horarioAtual, int minutos){
   return horaString + ":" + minutoString;
 }
 
+String campoData(int campo){
+  
+  int retorno;
 
+  switch (campo) {
+    case DIA:
+      retorno = myRTC.dayofmonth;
+      break;
+    case MES:
+      retorno = myRTC.month;
+      break;
+    case ANO:
+      retorno = myRTC.year;
+      break;
+    case HORA:
+      retorno = myRTC.hours;
+      break;
+    case MINUTO:
+      retorno = myRTC.minutes;
+      break;
+    case SEGUNDO:
+      retorno = myRTC.seconds;
+      break;
+  }
+  
+  String retornoString = String(retorno); 
+  if (retorno < 10){
+    retornoString = "0" + retornoString;
+    }         
+  return retornoString;
+}
+
+
+String coletaTempUmid(){
+  
+  float temperatura = dht.readTemperature();
+  float umidade = dht.readHumidity();
+
+  String temperaturaString;
+  String umidadeString;
+  
+  if (isnan(temperatura) || isnan(umidade)) {
+    temperaturaString = "erro";
+    umidadeString = "erro";
+  }else{
+    temperaturaString = String(temperatura);
+    umidadeString = String(umidade);
+  }
+
+  String dia = campoData(DIA); 
+  String mes = campoData(MES);
+  String ano = campoData(ANO);
+  
+  String hora = campoData(HORA);
+  String minuto = campoData(MINUTO);
+  String segundo = campoData(SEGUNDO);
+
+  String retorno = dia + "," + mes + "," + ano + "," + hora + "," + minuto + "," + segundo + "," + temperaturaString + "," + umidadeString;
+
+  return retorno;
+}
+
+
+boolean alarmeColeta(String horarioAtual){
+
+  String horarioNovaColeta = somaHora(ultimaColeta,1);
+  
+  if (horarioAtual == horarioNovaColeta){
+    return true;
+  }else{
+    return false;
+  }
+}
+
+
+void escreveArquivo(String nomeArquivo, String texto){
+ 
+ File dataFile = SD.open(nomeArquivo, FILE_WRITE);
+
+ if (dataFile) {
+    dataFile.println(texto);
+    dataFile.close();
+    Serial.println(texto);
+  }
+  else {
+    Serial.println("error opening file");
+  }
+}
 
 void setup() {
   
@@ -324,65 +419,25 @@ void setup() {
   
   Serial.println("");
   Serial.println("");
+
+  dht.begin();
+
+  String horarioAtual = obterHoraAtual();
+  String dados = coletaTempUmid();
+  ultimaColeta = horarioAtual;  
+  
 }
 
 void loop() {
   
-  String horaAtual = obterHoraAtual();
-
-  atualizaEstadosValvulas(horaAtual);
-   
-  // Reading temperature or humidity takes about 250 milliseconds!
-  // Sensor readings may also be up to 2 seconds 'old' (its a very slow sensor)
-  /*float h = dht.readHumidity();
-  // Read temperature as Celsius (the default)
-  float t = dht.readTemperature();
-
-  // Le as informacoes do CI
-  myRTC.updateTime(); 
-
+  String horarioAtual = obterHoraAtual();
   
-   if (isnan(h) || isnan(t)) {
-    Serial1.println("Failed to read from DHT sensor!");
-    return;
-  }
-   String dataString = "";
-   String hora = "";
-   String minutos = "";
-   String segundos = "";
-   
-    if (myRTC.hours < 10)
-  {
-    hora = "0" + (String)myRTC.hours;
-  }else{hora =(String)myRTC.hours;}
+  atualizaEstadosValvulas(horarioAtual);
 
-  if (myRTC.minutes < 10){
-    minutos = 0 + (String)myRTC.minutes;
-    }else{minutos =(String)myRTC.minutes;}
-
-  if (myRTC.seconds < 10){
-    segundos = "0"+ (String)myRTC.seconds;
-    }else{segundos = (String)myRTC.seconds;}
-   
-  //Informacoes Humidade e temperatura 
-  dataString = "H: "+(String)h+ "% "+ "T: "+(String)t+"*C "+(String)myRTC.dayofmonth + "/"+ (String)myRTC.month + "/"+ (String)myRTC.year +"  "+"Hora: "+ hora + ":" + minutos+":"+ segundos;
- //Serial1.println(dataString);
-    
-   // open the file. note that only one file can be open at a time,
-  // so you have to close this one before opening another.
-  File dataFile = SD.open("datalog.txt", FILE_WRITE);
-
-  // if the file is available, write to it:
-  if (dataFile) {
-    dataFile.println(dataString);
-    dataFile.close();
-    // print to the serial port too:
-    Serial.println(dataString);
+  boolean novaColeta = alarmeColeta(horarioAtual);
+  if (novaColeta){  
+    String dadosColetados = coletaTempUmid();
+    ultimaColeta = horarioAtual;
+    escreveArquivo("clima.csv", dadosColetados);
   }
-  // if the file isn't open, pop up an error:
-  else {
-    Serial.println("error opening datalog.txt");
-  }
-  delay(5000);
-*/
 }
