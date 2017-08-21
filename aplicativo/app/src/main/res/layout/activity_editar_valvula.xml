@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:orientation="vertical" android:layout_width="match_parent"
+    android:layout_height="match_parent">
+
+    <TextView
+        android:id="@+id/textTempo"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Tempo" />
+
+    <EditText
+        android:id="@+id/editTempo"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:ems="10"
+        android:inputType="textPersonName"
+        android:hint="Intervalo entre pulsos" />
+
+    <TextView
+        android:id="@+id/textPulsos"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Quantidade de Pulsos" />
+
+    <EditText
+        android:id="@+id/editPulsos"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:ems="10"
+        android:inputType="textPersonName"
+        android:hint="Pulsos" />
+
+    <Button
+        android:id="@+id/btn_edit_ok"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="OK"
+        android:onClick="onClickButton"
+        />
+</LinearLayout>
