@@ -25,6 +25,7 @@ import java.util.ArrayList;
 
 public class OperacaoActivity extends AppCompatActivity {
     private Sessao sessao= Sessao.getInstance();
+    private ConexaoBluetooth conexaoBluetooth = ConexaoBluetooth.getInstance();
 
     @Override
     protected void onCreate(Bundle savedInstanceState){
@@ -74,7 +75,7 @@ public class OperacaoActivity extends AppCompatActivity {
 
                 String posicao= "V" + Integer.toString(valvulaTemp.getVal());
                 String pulsos= Integer.toString(valvulaTemp.getPulsos());
-                String tempo= Double.toString(valvulaTemp.getTempo());
+                String tempo= Integer.toString(valvulaTemp.getTempo());
 
                 stringBuilder.append(posicao);
                 stringBuilder.append(",");
@@ -88,6 +89,8 @@ public class OperacaoActivity extends AppCompatActivity {
             String config = stringBuilder.toString();
             outputStreamWriter.write(config.getBytes());
             outputStreamWriter.close();
+            Toast.makeText(getApplicationContext(),config,Toast.LENGTH_LONG).show();
+            conexaoBluetooth.enviarDados(config);
         }
         catch (IOException e) {
             Log.e("Exception", "File write failed: " + e.toString());
@@ -99,7 +102,7 @@ public class OperacaoActivity extends AppCompatActivity {
     }
 
 
-    public void carregarArquivo(){
+    /*public void carregarArquivo(){
 
         String ret = "";
 
@@ -120,11 +123,11 @@ public class OperacaoActivity extends AppCompatActivity {
 
                     int valvulaInt= Integer.parseInt(array[0].substring(1));
                     int pulsosInt= Integer.parseInt(array[1]);
-                    double tempoDouble = Double.parseDouble(array[2]);
+                    int tempoInt = Integer.parseInt(array[2]);
 
                     valvulaTemp.setVal(valvulaInt);
                     valvulaTemp.setPulsos(pulsosInt);
-                    valvulaTemp.setTempo(tempoDouble);
+                    valvulaTemp.setTempo(tempoInt);
 
                     sessao.getArrayValvulas().add(valvulaTemp);
                 }
@@ -141,6 +144,6 @@ public class OperacaoActivity extends AppCompatActivity {
             Log.e("login activity", "Can not read file: " + e.toString());
         }
 
-    }
+    }*/
 
 }

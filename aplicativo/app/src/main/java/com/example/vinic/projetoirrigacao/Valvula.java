@@ -7,7 +7,7 @@ package com.example.vinic.projetoirrigacao;
 public class Valvula {
 
     private int val;
-    private double tempo;
+    private int tempo;
     private int pulsos;
 
     public int getVal() {
@@ -18,11 +18,11 @@ public class Valvula {
         this.val = val;
     }
 
-    public double getTempo() {
+    public int getTempo() {
         return tempo;
     }
 
-    public void setTempo(double tempo) {
+    public void setTempo(int tempo) {
         this.tempo = tempo;
     }
 

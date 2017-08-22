@@ -28,7 +28,7 @@ public class EditarValvula extends AppCompatActivity {
         final EditText tempo = (EditText) findViewById(R.id.editTempo);
         final EditText pulsos = (EditText) findViewById(R.id.editPulsos);
 
-        tempo.setText(Double.toString(sessao.getValvula().getTempo()));
+        tempo.setText(Integer.toString(sessao.getValvula().getTempo()));
         pulsos.setText(Integer.toString(sessao.getValvula().getPulsos()));
         Button editar = (Button) findViewById(R.id.btn_edit_ok);
 
@@ -43,12 +43,12 @@ public class EditarValvula extends AppCompatActivity {
         String tempoString= tempo.getText().toString();
         String pulsosString= pulsos.getText().toString();
 
-        Double tempoDouble = Double.parseDouble(tempoString);
+        int tempoInt = Integer.parseInt(tempoString);
         int pulsosInt= Integer.parseInt(pulsosString);
 
         int posicao= sessao.getValvula().getVal()-1;
 
-        sessao.getArrayValvulas().get(posicao).setTempo(tempoDouble);
+        sessao.getArrayValvulas().get(posicao).setTempo(tempoInt);
         sessao.getArrayValvulas().get(posicao).setPulsos(pulsosInt);
 
         sessao.setValvula(null);

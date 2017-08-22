@@ -149,6 +149,7 @@ public class PrincipalActivity extends AppCompatActivity {
                     try{
 
                         mSocket = mDevice.createRfcommSocketToServiceRecord(mUUID);
+                        conexaoBluetooth.mSocket=mSocket;
                         mSocket.connect();
                         Toast.makeText(getApplicationContext(),"Conectado ao Aparelho: " + MAC,Toast.LENGTH_LONG).show();
                         final Button btnConectar = (Button)findViewById(R.id.btn_conectar);
@@ -186,11 +187,11 @@ public class PrincipalActivity extends AppCompatActivity {
 
                     int valvulaInt= Integer.parseInt(array[0].substring(1));
                     int pulsosInt= Integer.parseInt(array[1]);
-                    double tempoDouble = Double.parseDouble(array[2]);
+                    int tempoInt = Integer.parseInt(array[2]);
 
                     valvulaTemp.setVal(valvulaInt);
                     valvulaTemp.setPulsos(pulsosInt);
-                    valvulaTemp.setTempo(tempoDouble);
+                    valvulaTemp.setTempo(tempoInt);
 
                     sessao.getArrayValvulas().add(valvulaTemp);
                 }

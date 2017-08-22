@@ -7,7 +7,7 @@
         android:id="@+id/textTempo"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="Tempo" />
+        android:text="Intervalo entre pulsos" />
 
     <EditText
         android:id="@+id/editTempo"

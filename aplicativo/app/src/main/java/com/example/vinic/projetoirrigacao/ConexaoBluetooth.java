@@ -4,6 +4,9 @@ import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
 import android.bluetooth.BluetoothSocket;
 
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.util.UUID;
 
 /**
@@ -29,6 +32,7 @@ public class ConexaoBluetooth {
 
     UUID mUUID = UUID.fromString("00001101-0000-1000-8000-00805f9b34fb");
 
+    ConnectedThread connectedThread;
 
     private  ConexaoBluetooth(){}
 
@@ -44,6 +48,64 @@ public class ConexaoBluetooth {
         }else{
             return false;
         }
+    }
+
+    public void enviarDados(String dados){
+        connectedThread = new ConnectedThread(mSocket);
+        connectedThread.enviar(dados);
+    }
+
+
+    private class ConnectedThread extends Thread {
+        private final InputStream mmInStream;
+        private final OutputStream mmOutStream;
+
+        public ConnectedThread(BluetoothSocket socket) {
+            InputStream tmpIn = null;
+            OutputStream tmpOut = null;
+
+            // Get the input and output streams, using temp objects because
+            // member streams are final
+            try {
+                tmpIn = socket.getInputStream();
+                tmpOut = socket.getOutputStream();
+            } catch (IOException e) { }
+
+            mmInStream = tmpIn;
+            mmOutStream = tmpOut;
+        }
+
+        public void run() {
+            byte[] buffer = new byte[30720];  // buffer store for the stream
+            int bytes; // bytes returned from read()
+
+            // Keep listening to the InputStream until an exception occurs
+            while (true) {
+                try {
+                    // Read from the InputStream
+                    bytes = mmInStream.read(buffer);
+
+                    String dadosBt= new String(buffer, 0, bytes);
+
+                    // Send the obtained bytes to the UI activity
+                   // mHandler.obtainMessage(MESSAGE_READ, bytes, -1, dadosBt)
+                     //       .sendToTarget();
+                } catch (IOException e) {
+                    break;
+                }
+            }
+        }
+
+        /* Call this from the main activity to send data to the remote device */
+        public void enviar(String dadosEnviar) {
+            byte[] msgBuffer = dadosEnviar.getBytes();
+            try {
+                mmOutStream.write(msgBuffer);
+            } catch (IOException e) { }
+        }
+
+        /* Call this from the main activity to shutdown the connection */
+
     }
 
 }
