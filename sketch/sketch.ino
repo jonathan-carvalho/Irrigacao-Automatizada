@@ -1,5 +1,4 @@
 #include <virtuabotixRTC.h>
-
 #include "DHT.h"
 #include <SPI.h>
 #include <SD.h>
@@ -24,11 +23,11 @@ File configValvulas; // Valvula,Qt_pulsos,Intervalo
 
 int tempoRegaDia = 5; //tempo em minutos
 
-String inicioFuncionamento = "10:08"; // HH:MM
+String inicioFuncionamento = "13:42"; // HH:MM
 
 String ultimaColeta;
 
-
+String comunicacao = "";
 
 // ------------------------- Inicio da classe Valvula -------------------------
 class Valvula{
@@ -122,7 +121,7 @@ String readLinha(File file){
   return linha;
 }
 
-void configuraInicialValvula(String configuracaoInicial, int posicao){
+void configuraValvulas(String configuracao, int posicao){
   
   String configSeparada[3];
   int inicio = 0;
@@ -131,12 +130,12 @@ void configuraInicialValvula(String configuracaoInicial, int posicao){
   
   for (int i=0; i < 3; i++){ 
 
-    fim = configuracaoInicial.indexOf(",",inicio);
+    fim = configuracao.indexOf(",",inicio);
     
     if (fim == -1){
-      fatia = configuracaoInicial.substring(inicio);
+      fatia = configuracao.substring(inicio);
     }else{
-      fatia = configuracaoInicial.substring(inicio,fim);
+      fatia = configuracao.substring(inicio,fim);
       }
     configSeparada[i] = fatia;
     
@@ -156,14 +155,14 @@ void configuraInicialValvula(String configuracaoInicial, int posicao){
 
 void atualizaConfigTodasValvulas(){
 
- configValvulas = SD.open("valvulas.csv");
+  configValvulas = SD.open("valvulas.csv");
 
   String configuracao;
     
   for (int i=0; i < 7; i++) {
     
     configuracao = readLinha(configValvulas);
-    configuraInicialValvula(configuracao,i);
+    configuraValvulas(configuracao,i);
  }
  
  configValvulas.close();
@@ -244,53 +243,6 @@ void atualizaEstadosValvulas(String horaAtual){
   } 
 }
 
-
-String obterHoraAtual(){
-  
-  myRTC.updateTime();
-  
-  int hora = myRTC.hours;
-  String horaString = String(hora);
-  if (hora < 10){
-    horaString = "0" + horaString;
-    }
-    
-  int minuto = myRTC.minutes;
-  String minutoString = String(minuto);
-  if (minuto < 10){
-    minutoString = "0" + minutoString;
-    }
-
-  String horaAtual = horaString + ":" + minutoString;
-  return horaAtual;
-}
-
-String somaHora(String horarioAtual, int minutos){
-
-  int horaFinal = horarioAtual.substring(0,2).toInt();
-  int minutoAtual = horarioAtual.substring(3).toInt();
-
-  int minutosFinal = minutoAtual + minutos;
-
-  if (minutosFinal > 59){
-    
-    horaFinal += 1;
-    minutosFinal -= 60;    
-    }
-
-  String horaString = String(horaFinal);
-  if (horaFinal < 10){
-    horaString = "0" + horaString;
-    }
-  
-  String minutoString = String(minutosFinal);
-  if (minutosFinal < 10){
-    minutoString = "0" + minutoString;
-    }   
-  
-  return horaString + ":" + minutoString;
-}
-
 String campoData(int campo){
   
   int retorno;
@@ -321,6 +273,43 @@ String campoData(int campo){
     retornoString = "0" + retornoString;
     }         
   return retornoString;
+}
+
+String obterHorarioAtual(){
+  
+  myRTC.updateTime();
+
+  String hora = campoData(HORA);
+  String minuto = campoData(MINUTO);
+  
+  String horarioAtual = hora + ":" + minuto;
+  return horarioAtual;
+}
+
+String somaHora(String horarioAtual, int minutos){
+
+  int horaFinal = horarioAtual.substring(0,2).toInt();
+  int minutoAtual = horarioAtual.substring(3).toInt();
+
+  int minutosFinal = minutoAtual + minutos;
+
+  if (minutosFinal > 59){
+    
+    horaFinal += 1;
+    minutosFinal -= 60;    
+    }
+
+  String horaString = String(horaFinal);
+  if (horaFinal < 10){
+    horaString = "0" + horaString;
+    }
+  
+  String minutoString = String(minutosFinal);
+  if (minutosFinal < 10){
+    minutoString = "0" + minutoString;
+    }   
+  
+  return horaString + ":" + minutoString;
 }
 
 
@@ -371,14 +360,45 @@ void escreveArquivo(String nomeArquivo, String texto){
  File dataFile = SD.open(nomeArquivo, FILE_WRITE);
 
  if (dataFile) {
-    dataFile.println(texto);
+    dataFile.print(texto);
     dataFile.close();
-    Serial.println(texto);
+    Serial.print(texto);
   }
   else {
     Serial.println("error opening file");
   }
 }
+
+void enviaArquivoBluetooth(String nomeArquivo){
+  
+  File dataFile = SD.open(nomeArquivo);
+  if (dataFile){
+      while(dataFile.available()) {
+        Serial1.write(dataFile.read());
+      }
+      dataFile.close();
+    }else{
+        Serial1.println("error opening file");
+      }
+}
+
+void imprimeConfigValvulas(){
+  
+  for (int i=0; i < 7; i++) {
+   Valvula valvula = valvulas[i];
+   Serial.print("Valvula ");
+   Serial.println(valvula.getNumero());
+   Serial.print("Pulsos Total: ");
+   Serial.println(valvula.getQtPulsosTotal());
+   Serial.print("Intervalo entre pulsos: ");
+   Serial.println(valvula.getIntervaloPulsos());
+   Serial.println("------------------");  
+  }
+  
+  Serial.println("");
+  Serial.println("");
+}
+
 
 void setup() {
   
@@ -389,9 +409,8 @@ void setup() {
   }
   
   Serial.begin(9600);
-
-  // Serial1.begin(9600);
-    
+  Serial1.begin(9600);  
+     
   Serial.print("Initializing SD card... ");
 
   // see if the card is present and can be initialized:
@@ -404,40 +423,49 @@ void setup() {
  
   atualizaConfigTodasValvulas();
 
-  for (int i=0; i < 7; i++) {
-   Valvula valvula = valvulas[i];
-   Serial.print("Valvula ");
-   Serial.println(valvula.getNumero());
-   Serial.print("Pulsos Total: ");
-   Serial.println(valvula.getQtPulsosTotal());
-   Serial.print("Intervalo entre pulsos: ");
-   Serial.println(valvula.getIntervaloPulsos());
-   Serial.print("Controla o pino: ");
-   Serial.println(valvula.getPino()); 
-   Serial.println("------------------");  
-  }
+  imprimeConfigValvulas();
   
-  Serial.println("");
-  Serial.println("");
-
   dht.begin();
 
-  String horarioAtual = obterHoraAtual();
+  String horarioAtual = obterHorarioAtual();
   String dados = coletaTempUmid();
-  ultimaColeta = horarioAtual;  
-  
+  ultimaColeta = horarioAtual;
+
+  Serial1.println("Testando bluetooth");
+
 }
 
 void loop() {
-  
-  String horarioAtual = obterHoraAtual();
+
+  String horarioAtual = obterHorarioAtual();
   
   atualizaEstadosValvulas(horarioAtual);
 
   boolean novaColeta = alarmeColeta(horarioAtual);
+  
   if (novaColeta){  
     String dadosColetados = coletaTempUmid();
     ultimaColeta = horarioAtual;
-    escreveArquivo("clima.csv", dadosColetados);
+    escreveArquivo("clima.csv", dadosColetados + "\n");
   }
+
+  if (Serial1.available()){
+    while(Serial1.available()){
+      int codAscii = Serial1.read();
+      comunicacao += char(codAscii);
+      } 
+    String pedaco = comunicacao.substring(0,5);
+    
+    if (pedaco.equals("clima")){
+      enviaArquivoBluetooth("clima.csv");      
+      }
+    else{
+      boolean remocao = SD.remove("valvulas.csv");
+      escreveArquivo("valvulas.csv", comunicacao);
+      atualizaConfigTodasValvulas();
+      imprimeConfigValvulas();
+      }
+    comunicacao = "";
+  }
+  delay(2000);
 }
